@@ -1,0 +1,536 @@
+{
+  "name": "CSV Validation id:1945174639679424085",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "incoming",
+          "cachedResultUrl": ""
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        48
+      ],
+      "id": "1076a494-ca6e-4c36-8c22-612dc9118506",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        448,
+        48
+      ],
+      "id": "55e2426a-791b-4e3f-bf50-e07d908219cd",
+      "name": "Download CSV File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        224,
+        48
+      ],
+      "id": "d5340206-be28-4d90-84cf-11084858a888",
+      "name": "Loop Over New Files"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ads[0].description }}",
+                    "rightValue": "={{ $('Split Out').item.json[\"Item Description\"] }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "8738d8a9-2347-4601-b6a4-4f6295fb3a1c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "true"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4b715aff-be02-4ca2-9f00-0a134c1f1838",
+                    "leftValue": "={{ $json.ads[0].description }}",
+                    "rightValue": "={{ $('Split Out').item.json[\"Item Description\"] }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        368
+      ],
+      "id": "c26a4b0c-56b3-4a21-95fa-875b58a34464",
+      "name": "Description Match?"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        48
+      ],
+      "id": "d41a1210-a716-4c79-b625-c3bdc5fc9e31",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"Item Description\": \"{{ $('Split Out').item.json['Item Description'] }}\",\n  \"Make\": \"{{ $('Split Out').item.json.Make }}\",\n  \"Model\": \"{{ $('Split Out').item.json.Model }}\",\n  \"Match\": \"Yes\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        272
+      ],
+      "id": "ef6bcc61-f357-4f71-9856-c953502b5a11",
+      "name": "Match True"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"Item Description\": \"{{ $('Split Out').item.json['Item Description'] }}\",\n  \"Make\": \"{{ $('Split Out').item.json.Make }}\",\n  \"Model\": \"{{ $('Split Out').item.json.Model }}\",\n  \"Match\": \"No\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        464
+      ],
+      "id": "1ddd7b45-6122-420b-8e8c-32d655a1f433",
+      "name": "Match False"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        672,
+        48
+      ],
+      "id": "3e7f4be4-2bad-4cf2-aaf1-141519c8a13a",
+      "name": "Extract CSV Contents"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node\n// Transform array into single object containing the full array\n\nconst inputData = $input.all();\nconst dataArray = [];\n\n// Extract the json data from each input item\ninputData.forEach(item => {\n  dataArray.push(item.json);\n});\n\n// Return as single object containing the array\nreturn [{\n  json: {\n    items: dataArray\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        48
+      ],
+      "id": "6298fe5d-33c1-4836-a3a4-822849ede370",
+      "name": "Create List"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        368
+      ],
+      "id": "c6fdfae8-39a3-45e7-b67a-5f00a8022288",
+      "name": "Wait On Results"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        368
+      ],
+      "id": "998cf240-14c6-444b-8647-d6b196e8c40c",
+      "name": "Create New CSV File"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Loop Over New Files').first().json.name.replace(/(\\.[^.]*)$/, '_processed$1') }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "11ewJ84OegpCJ6GT6AjziMXK4FVPhtMQ4",
+          "mode": "list",
+          "cachedResultName": "processed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/11ewJ84OegpCJ6GT6AjziMXK4FVPhtMQ4"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1344,
+        464
+      ],
+      "id": "a23f90f9-ab8b-4f56-94e7-466278f11fcd",
+      "name": "Upload New CSV File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Google Node\n---\n1. Set Credentials\n2. Specify Incoming Folder\n",
+        "height": 336,
+        "width": 176,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -32,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "04614558-6549-4ea3-a94d-d6d4ea8f0c14",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Google Node\n---\n1. Set Credentials\n2. Specify Processed Folder\n",
+        "height": 304,
+        "width": 176,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1312,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "cb1256fb-90c4-4150-8d87-b1aaab231f6f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Google Node\n---\n1. Set Credentials\n",
+        "height": 288,
+        "width": 176,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        416,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "91ec6246-0084-46dd-b246-c56d22b0e054",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## SerpAPI Node\n---\n1. Set Credentials\n2. Adjust query to your requirements.",
+        "height": 304,
+        "width": 160,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1312,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "d24028b0-b2ca-491f-a10d-08605243c212",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Set Match\n---\n1. Determine what your match criteria is going to be based on SerpAPI results.",
+        "height": 320,
+        "width": 176,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        416,
+        336
+      ],
+      "typeVersion": 1,
+      "id": "6a5e414d-d748-4ad2-9743-0f801878e513",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "url": "=https://serpapi.com/search.json?engine=google&q=\"{{ $json.Make }} {{ $json.Model }}\"",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        48
+      ],
+      "id": "09c009ac-931f-4dc2-9ebd-c753b2bd9109",
+      "name": "SerpAPI",
+      "credentials": {
+        "serpApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Loop Over New Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download CSV File": {
+      "main": [
+        [
+          {
+            "node": "Extract CSV Contents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over New Files": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Download CSV File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Description Match?": {
+      "main": [
+        [
+          {
+            "node": "Match True",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Match False",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "SerpAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match True": {
+      "main": [
+        [
+          {
+            "node": "Wait On Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match False": {
+      "main": [
+        [
+          {
+            "node": "Wait On Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Extract CSV Contents": {
+      "main": [
+        [
+          {
+            "node": "Create List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create List": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait On Results": {
+      "main": [
+        [
+          {
+            "node": "Create New CSV File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New CSV File": {
+      "main": [
+        [
+          {
+            "node": "Upload New CSV File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload New CSV File": {
+      "main": [
+        [
+          {
+            "node": "Loop Over New Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI": {
+      "main": [
+        [
+          {
+            "node": "Description Match?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7f730fb0-d149-45c6-9171-c6df61cde497",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  },
+  "id": "",
+  "tags": []
+}
